@@ -226,7 +226,7 @@ v3 has a different set of prototypes from v2.2. Some v2.2 prototypes are retired
 ## Security
 
 - All secrets in env vars. Never committed.
-- Master account MT5 investor password encrypted with pgsodium in `master_account_config`.
+- Master account MT5 investor password encrypted with **pgsodium** in `master_account_config.mt_investor_password_encrypted` (key name: `master_account_password`). pgsodium is the v3.3 default per PRD §12. If a project doesn't have pgsodium enabled, the migration's key-creation block is a no-op — the column should then be migrated to Supabase Vault. Decision recorded in `supabase/migrations/20260430120000_extensions.sql` and `supabase/README.md`.
 - HFM Partner API key, MetaAPI token, Anthropic API key, Resend key — env vars.
 - Client-side never sees server-side secrets.
 
