@@ -61,6 +61,18 @@ export function SignupForm() {
           At least 8 characters.
         </p>
       </div>
+      <div className="space-y-2">
+        <Label htmlFor="password_confirmation">Confirm password</Label>
+        <Input
+          id="password_confirmation"
+          name="password_confirmation"
+          type="password"
+          autoComplete="new-password"
+          minLength={8}
+          required
+          aria-describedby={state?.error ? "form-error" : undefined}
+        />
+      </div>
       {state?.error ? (
         <p
           id="form-error"

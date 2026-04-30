@@ -5,13 +5,19 @@ export const LoginSchema = z.object({
   password: z.string().min(1, { message: "Password is required." }),
 });
 
-export const SignupSchema = z.object({
-  email: z.string().email({ message: "Enter a valid email address." }),
-  password: z
-    .string()
-    .min(8, { message: "Password must be at least 8 characters." })
-    .max(72, { message: "Password must be 72 characters or fewer." }),
-});
+export const SignupSchema = z
+  .object({
+    email: z.string().email({ message: "Enter a valid email address." }),
+    password: z
+      .string()
+      .min(8, { message: "Password must be at least 8 characters." })
+      .max(72, { message: "Password must be 72 characters or fewer." }),
+    password_confirmation: z.string(),
+  })
+  .refine((data) => data.password === data.password_confirmation, {
+    message: "Passwords don't match.",
+    path: ["password_confirmation"],
+  });
 
 export const PasswordResetRequestSchema = z.object({
   email: z.string().email({ message: "Enter a valid email address." }),
