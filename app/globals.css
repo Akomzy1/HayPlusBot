@@ -87,3 +87,56 @@
     transition: background-color 5000s ease-in-out 0s;
   }
 }
+
+/* Print stylesheet — applies primarily to /risk-disclosure but is global so
+   any future printable pages benefit. Tailwind print:hidden handles chrome
+   visibility; this block flips colours and adds page-break behaviour. */
+@media print {
+  html,
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  /* invert all branded surfaces so the printed page is readable */
+  .bg-background,
+  .bg-card,
+  .bg-secondary {
+    background: #ffffff !important;
+  }
+  .text-foreground,
+  .text-muted-foreground,
+  .text-foreground\/85 {
+    color: #000000 !important;
+  }
+  .border-white\/\[0\.06\] {
+    border-color: #d1d5db !important;
+  }
+  /* page break before each Part section */
+  section[id^="part-"] {
+    break-before: page;
+    page-break-before: always;
+  }
+  /* avoid orphaned headings */
+  h1,
+  h2,
+  h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  /* hide forms / buttons (anything interactive) */
+  button,
+  [role="button"] {
+    display: none !important;
+  }
+  a {
+    color: #000 !important;
+    text-decoration: underline;
+  }
+  /* show URL after links so printed copy preserves references */
+  a[href^="http"]::after,
+  a[href^="mailto:"]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.85em;
+    color: #555;
+  }
+}

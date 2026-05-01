@@ -14,7 +14,7 @@ export function Footer() {
   const telegramUrl =
     process.env.NEXT_PUBLIC_TELEGRAM_CHANNEL_URL ?? "https://t.me/hayplusbot";
   return (
-    <footer className="border-t border-white/[0.06] bg-background">
+    <footer className="border-t border-white/[0.06] bg-background print:hidden">
       <div className="mx-auto max-w-6xl px-6 py-12">
         <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
           <div className="space-y-3">

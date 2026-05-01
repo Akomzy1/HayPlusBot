@@ -26,7 +26,7 @@ export function TopNav() {
   return (
     <header
       className={cn(
-        "fixed inset-x-0 top-0 z-40 transition-colors duration-200",
+        "fixed inset-x-0 top-0 z-40 transition-colors duration-200 print:hidden",
         scrolled
           ? "border-b border-white/[0.06] bg-background/80 backdrop-blur"
           : "border-b border-transparent",

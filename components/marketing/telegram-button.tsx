@@ -17,7 +17,7 @@ export function TelegramButton() {
 
   return (
     <div
-      className="fixed bottom-4 right-4 z-50 sm:bottom-6 sm:right-6"
+      className="fixed bottom-4 right-4 z-50 print:hidden sm:bottom-6 sm:right-6"
       aria-hidden={!visible}
     >
       {showTooltip ? (
