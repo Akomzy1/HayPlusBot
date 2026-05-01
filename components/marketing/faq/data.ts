@@ -84,7 +84,7 @@ export const FAQ_QUESTIONS: FaqQuestion[] = [
     category: "subscribing",
     question: "What's the minimum deposit?",
     answer:
-      "HFM sets its own minimum deposit requirements for HFcopy subscriptions. Their platform will show you the exact minimum during the subscription process. HayPlusbot doesn't enforce a separate minimum — if HFM's threshold is met, you can subscribe.",
+      "We recommend at least $100 USD equivalent in your HFM account before subscribing. This is the minimum that produces meaningful copy-trading results — below this, HFM may skip smaller trades or produce positions too small to be useful. HFM also sets its own minimum deposit requirements which their platform displays during the HFcopy subscription process. Both must be met to start copying our strategy.",
   },
   {
     id: "question-9",
