@@ -1,14 +1,10 @@
-import { requireDisclosureSigned } from "@/lib/auth/get-user";
 import { Logo } from "@/components/marketing/logo";
 
-export default async function DashboardLayout({
+export default function OnboardingLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // belt-and-braces: middleware already enforces this, but server components
-  // depending on disclosure-signed access should re-check.
-  await requireDisclosureSigned();
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-white/[0.06]">
@@ -16,7 +12,7 @@ export default async function DashboardLayout({
           <Logo />
         </div>
       </header>
-      <main>{children}</main>
+      {children}
     </div>
   );
 }

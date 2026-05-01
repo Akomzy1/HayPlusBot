@@ -38,16 +38,25 @@ export async function GET(request: Request) {
         />
         {/* monogram + wordmark */}
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <svg viewBox="0 0 24 24" width="44" height="44">
-            <path
-              d="M3 18 L9 12 L13 15 L21 6"
-              stroke="#1D9E75"
-              strokeWidth="2.4"
-              fill="none"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <circle cx="21" cy="6" r="2" fill="#1D9E75" />
+          <svg viewBox="0 0 64 64" width="64" height="64">
+            <g transform="rotate(45 32 32)">
+              <rect
+                x="6"
+                y="6"
+                width="52"
+                height="52"
+                rx="12"
+                fill="none"
+                stroke="#1D9E75"
+                strokeWidth="4.4"
+                strokeLinejoin="round"
+              />
+            </g>
+            <rect x="20" y="19" width="4.6" height="26" rx="2.1" fill="#F5F6F8" />
+            <rect x="33.4" y="19" width="4.6" height="26" rx="2.1" fill="#F5F6F8" />
+            <rect x="20" y="29.5" width="18" height="3.6" rx="1.4" fill="#1D9E75" />
+            <rect x="44" y="25" width="3.4" height="13.2" rx="1.2" fill="#1D9E75" />
+            <rect x="41.2" y="29.6" width="9" height="3.4" rx="1.2" fill="#1D9E75" />
           </svg>
           <span style={{ fontSize: 36, fontWeight: 600, letterSpacing: -0.5 }}>
             HayPlusbot

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Hero } from "@/components/marketing/hero";
+import { ForexTicker } from "@/components/marketing/forex-ticker";
 import { PerformanceTeaser } from "@/components/marketing/performance-teaser";
 import { HowItWorks } from "@/components/marketing/how-it-works";
 import { StrategyFeatures } from "@/components/marketing/strategy-features";
@@ -72,6 +73,7 @@ export default function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <Hero />
+      <ForexTicker />
       <PerformanceTeaser />
       <HowItWorks />
       <StrategyFeatures />
