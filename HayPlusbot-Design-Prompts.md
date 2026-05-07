@@ -1,4 +1,4 @@
-# HayPlusbot — Design Prompts Library (v3.3)
+# HayPlusbot — Design Prompts Library (v3.4)
 
 **The complete, current, ready-to-use library of design prompts for generating HayPlusbot's visual prototypes.**
 
@@ -362,7 +362,7 @@ Answer: "Yes. To subscribe to our HFcopy strategy, your HFM account must be regi
 Answer: "If your existing HFM account isn't under our IB partner code, you cannot use it to subscribe to our strategy. You'd need to open a new HFM account via our referral link. The existing account remains yours for other purposes, but for HayPlusbot subscription, the new account under our code is required."
 
 8. **What's the minimum deposit?**
-Answer: "HFM sets its own minimum deposit requirements for HFcopy subscriptions. Their platform will show you the exact minimum during the subscription process. HayPlusbot doesn't enforce a separate minimum — if HFM's threshold is met, you can subscribe."
+Answer: "We recommend at least $100 USD equivalent in your HFM account before subscribing. This is the minimum that produces meaningful copy-trading results — below this, HFM may skip smaller trades or produce positions too small to be useful. HFM also sets its own minimum deposit requirements which their platform displays during the HFcopy subscription process. Both must be met to start copying our strategy."
 
 9. **How long does setup take?**
 Answer: "From signup on HayPlusbot to active subscription: typically 30-60 minutes, depending on how quickly HFM completes your account KYC. The slowest part is usually HFM's verification process, which is outside our control."
@@ -1640,9 +1640,9 @@ Layout:
 **Primary CTA** (large, centred, prominent)
 - Button: "Open HFcopy subscription →" (teal, external link icon)
 - Small text below: "Opens in a new tab. Typically takes 2 minutes to complete on HFM's platform."
-- IMPORTANT (hidden from user in prototype but should be documented in comments): in production, this CTA triggers a server-side balance check before redirect. If user's HFM balance is below our internal threshold, show an amber-soft error alert: "Your HFM account balance is below the minimum required for reliable copy trading. We recommend at least $100 USD equivalent. Please deposit additional funds and try again." User stays on this page. Above threshold — redirect to HFM's HFcopy subscription page in new tab.
+- IMPORTANT (v3.4): Clicking this CTA redirects directly to HFM's HFcopy subscription page in a new tab. There is no server-side balance check (v3.3 had one — removed in v3.4 because HFM offers no Partner API). HFM enforces its own minimum deposit on their HFcopy side; users below HFM's threshold get HFM's error message during subscription on HFM's platform. The $100 recommendation on this page is guidance only.
 
-For the prototype: include an "Error state" variant shown with the amber alert visible (and the primary CTA still shown), so the design team reviews both success-redirect state and the insufficient-balance blocked state.
+For the prototype: just one state (success). No error variant needed.
 
 **Section C — Important notes** (2 amber-soft callouts)
 1. "You can unsubscribe anytime through HFM's interface. HayPlusbot doesn't manage your subscription — HFM does."
@@ -1650,7 +1650,7 @@ For the prototype: include an "Error state" variant shown with the amber alert v
 
 **Section D — What happens next**
 - H3: "After you subscribe"
-- Body: "We detect your subscription within 5 minutes. Your dashboard updates automatically. You'll receive a welcome email. Subsequent copied trades appear in your HFM account automatically — no further action from you."
+- Body: "We verify your account is under our referral within 24-48 hours via our reconciliation. Your dashboard updates automatically once verified. You'll receive a welcome email. Subsequent copied trades appear in your HFM account as soon as HFM activates the subscription — that's separate from our verification timing."
 
 **Footer** — standard
 

@@ -9,10 +9,12 @@ You are the engineering assistant for HayPlusbot. This document is your baseline
 
 **Companion documents (reference when specifically relevant):**
 
-- `HayPlusbot-PRD.md` — complete product specification (v3.3)
-- `HayPlusbot-Risk-Disclosure.md` — live subscriber risk acknowledgment (v3.3)
+- `HayPlusbot-PRD.md` — complete product specification (v3.4)
+- `HayPlusbot-Risk-Disclosure.md` — live subscriber risk acknowledgment (v3.4)
 - `HayPlusbot-Design-Prompts.md` — consolidated design prompt library, all prompts ready to paste into claude.ai
 - `HayPlusbot-Claude-Code-Phase-1.md` — Phase 1 Claude Code build prompts (scaffold, schema, auth)
+- `HayPlusbot-Claude-Code-Phase-2.md` — Phase 2 Claude Code build prompts (marketing pages)
+- `HayPlusbot-Claude-Code-Phase-3.md` — Phase 3 Claude Code build prompts (broker abstraction, subscribe flow, manual reconciliation)
 - `prototypes/` — visual reference HTML artifacts generated from the design prompts library
 - `skills/smc-aplus-detection/SKILL.md` — A+ setup detection skill pack (covers 9 pairs, non-USD cross handling)
 
@@ -20,11 +22,23 @@ You are the engineering assistant for HayPlusbot. This document is your baseline
 
 ---
 
-## Core context (what v3 is)
+## What changed in v3.4
+
+HFM confirmed they don't offer a public Partner API. Three v3.3 features that depended on real-time API access are replaced with manual processes:
+
+1. **Account verification under IB code** is now reconciled via daily/weekly admin CSV upload from HFM Partner Area dashboard (instead of real-time API call at subscribe time).
+2. **Two-tier balance gate is removed entirely.** $100 USD equivalent is shown as guidance only on the subscribe page. HFM enforces its own minimums on the HFcopy side.
+3. **Automated subscriber list sync is replaced** with admin-triggered manual reconciliation via CSV upload action.
+
+The product itself doesn't change. The architecture stays clean. Most of v3.3's code work is preserved. v3.4 is the actual industry pattern — Sonic AI, NEO FX, and similar AI-strategy services on broker copy-trading platforms operate this way.
+
+---
+
+## Core context (what v3.4 is)
 
 HayPlusbot is a **single-service platform**: users subscribe to a master HFcopy strategy running on the client's HFM account. The master executes A+ setups automatically using a deterministic SMC/ICT engine. HFM's HFcopy infrastructure mirrors the master's trades into subscribers' HFM accounts.
 
-**The user never runs a bot on their own account.** The v2.2 architecture had two execution paths (bot on user account, plus master HFcopy); v3 has only the second. No per-user MT5 credentials. No per-user execution logic. No broker-lock enforcement in the v2.2 sense.
+**The user never runs a bot on their own account.** No per-user MT5 credentials. No per-user execution logic. No broker-lock enforcement in the v2.2 sense.
 
 **The website is primarily a marketing and transparency surface.** Authenticated users can view performance, signal history, and methodology — but their actual trading experience happens on HFM, not on HayPlusbot.com.
 
@@ -32,7 +46,7 @@ HayPlusbot is a **single-service platform**: users subscribe to a master HFcopy 
 
 ---
 
-## Product decisions that are settled in v3
+## Product decisions that are settled in v3.4
 
 Do not re-litigate these:
 
@@ -43,27 +57,30 @@ Do not re-litigate these:
 - **Strategy:** deterministic SMC/ICT per SKILL.md. 7-factor confluence + 3 fundamental filters. A+ = 6/7 plus all fundamentals. DXY filter skipped on non-USD crosses.
 - **Pricing: free signup.** Revenue via HFM's 40/60 HFcopy fee split. No Stripe. No monthly or one-off fees on HayPlusbot.
 - **Email verification only.** No phone verification (removed from v2.2).
-- **Mandatory IB referral for HFcopy subscription.** Users whose HFM accounts aren't under our partner code cannot subscribe.
+- **Mandatory IB referral for HFcopy subscription.** Users whose HFM accounts aren't under our partner code cannot meaningfully participate in our strategy economics. Enforcement in v3.4 is via manual reconciliation against HFM Partner Area exports (24-48 hour cycle), not real-time API checks.
 - **Risk disclosure signing is mandatory before any product content is viewable.** Unsigned users see blocked content with a "Sign the disclosure to continue" modal.
-- **Subscribe balance gate (two-tier).** Public recommendation: $100 USD equivalent minimum (shown on subscribe page as friendly guidance). Internal hard gate: $90 USD equivalent (enforced via HFM Partner API balance check + Finnhub FX conversion, before allowing HFcopy subscription handoff). 5% fluctuation buffer means users at $85+ pass; below $85 block. The $10 gap between public recommendation and internal gate accommodates FX movement between funding and verification. Error messages and all user-facing content reference only $100. The $90 and $85 figures are internal and must never appear in user-facing text, page source, or logs visible to end users. Check runs once at subscription time; no ongoing post-activation enforcement.
-- **Dashboard is authenticated + disclosure-signed.** Landing, FAQ, how-it-works, commercial-transparency, risk-disclosure-view pages are public. Everything else requires signed-in and disclosure-signed.
-- **Subscriber count public on landing page once above 50.** Below 50, hidden.
+- **Manual verification of IB code attribution** via daily/weekly admin upload of HFM Partner Area subscriber list. Users self-report their HFM account number; reconciliation marks them verified within 24-48 hours. (Replaces v3.3's real-time API verification — HFM does not offer Partner API access.)
+- **No balance gate.** $100 USD equivalent shown as guidance only on subscribe page. HFM enforces own minimums on HFcopy side. (Replaces v3.3's two-tier balance gate — required Partner API access not available.) The `subscribe_balance_check_log` table is preserved in schema unpopulated, in case HFM ever offers Partner API.
+- **Subscriber count manually updated by admin** via dashboard. Public threshold of 50 still enforced — widget hidden below 50, displayed above.
+- **Dashboard is authenticated + disclosure-signed.** Landing, FAQ, how-it-works, risk-disclosure-view pages are public. Everything else requires signed-in and disclosure-signed.
 - **60-second delay on public open positions** (anti-front-running).
 - **Admin dashboard at `/admin/*`.** `is_admin` role check. Non-admins get 404. Desktop-only (1024px+).
-- **Admin action audit logging is non-negotiable.** Every destructive action writes to `admin_action_log` BEFORE the action executes. Append-only. Trigger raises on UPDATE/DELETE. Typed confirmation on high-impact actions.
+- **Admin action audit logging is non-negotiable.** Every destructive action — including reconciliation actions and subscriber count updates — writes to `admin_action_log` BEFORE the action executes. Append-only. Trigger raises on UPDATE/DELETE. Typed confirmation on high-impact actions.
 - **Dark mode only.** Mobile-responsive web app. No native apps. No PWA (optional future).
 
 ---
 
 ## Architecture at a glance
 
-Three deployed components (same as v2.2, but simpler because of single execution path):
+Three deployed components:
 
 1. **Next.js app** — public marketing, authenticated dashboard, admin dashboard, API routes. Vercel.
 2. **Bot worker** — long-running Node process running the master account. Railway.
-3. **Supabase** — Postgres, Auth (email+password), Edge Functions (daily HFM sync), Storage (disclosure PDFs).
+3. **Supabase** — Postgres, Auth (email+password), Storage (disclosure PDFs).
 
-**Key architectural property of v3:** one MetaAPI session (master account only). The bot worker is no longer multi-tenant. This simplifies session management, reconnection handling, credential storage, and error handling significantly.
+(In v3.3 there was a Supabase Edge Function for daily HFM sync. Removed in v3.4 — replaced by admin manual action since HFM has no API to sync against.)
+
+**Key architectural property:** one MetaAPI session (master account only). The bot worker is single-tenant. This simplifies session management, reconnection handling, credential storage, and error handling significantly. MetaAPI connects to HFM's MT5 servers like any standard MT5 client; HFM having no Partner API is irrelevant to the bot worker's operation.
 
 ---
 
@@ -72,32 +89,35 @@ Three deployed components (same as v2.2, but simpler because of single execution
 ```
 HayPlusbot/
 ├── app/
-│   ├── (marketing)/              # Landing, how-it-works, FAQ, commercial-transparency
+│   ├── (marketing)/              # Landing, how-it-works, FAQ
 │   ├── (public)/                 # Risk disclosure read-only view
 │   ├── (auth)/                   # Login, signup, reset-password
-│   ├── (onboarding)/             # Disclosure signing, HFM verification
+│   ├── (onboarding)/             # Disclosure signing, HFM account recording
 │   ├── (dashboard)/              # Authenticated user dashboard, signals archive, settings
-│   ├── (admin)/                  # Admin dashboard (is_admin required)
-│   └── api/                      # API routes (HFM sync webhooks, etc.)
+│   ├── (admin)/                  # Admin dashboard (is_admin required); includes /admin/hfm-sync for CSV reconciliation
+│   └── api/                      # API routes (webhooks etc.)
 ├── components/
 │   ├── ui/                       # shadcn/ui primitives
 │   ├── chart/                    # Lightweight Charts
 │   ├── signals/                  # Signal card variants
 │   ├── dashboard/
-│   ├── admin/
+│   ├── admin/                    # Includes admin/hfm-sync CSV upload UI
 │   └── marketing/
 ├── lib/
 │   ├── supabase/
-│   ├── brokers/                  # Broker-agnostic layer (preserved for future)
+│   ├── brokers/                  # Broker-agnostic layer
 │   │   ├── types.ts              # BrokerProvider interface
-│   │   └── hfm/                  # HFM implementation
-│   │       ├── provider.ts
-│   │       ├── partner-client.ts
-│   │       └── hfcopy-client.ts
+│   │   ├── index.ts              # Provider factory
+│   │   ├── mock/                 # MockBrokerProvider (dev only)
+│   │   │   └── provider.ts
+│   │   └── hfm/                  # HFM implementation skeleton
+│   │       ├── provider.ts       # Most methods throw "not yet implemented" until HFM offers API
+│   │       ├── partner-client.ts # Skeleton
+│   │       └── hfcopy-client.ts  # Skeleton
 │   ├── metaapi/                  # Master account connection
 │   ├── claude/                   # Anthropic SDK helpers
 │   ├── auth/                     # Session, requireAuth, requireAdmin, requireDisclosureSigned
-│   ├── admin/                    # Audit logging helpers
+│   ├── admin/                    # Audit logging helpers, CSV reconciliation logic
 │   └── types/
 ├── workers/
 │   └── bot/
@@ -106,8 +126,7 @@ HayPlusbot/
 │       ├── ai/                   # Sentiment, narrative
 │       └── index.ts
 ├── supabase/
-│   ├── migrations/
-│   └── functions/                # Daily HFM sync
+│   └── migrations/
 ├── prototypes/
 ├── docs/
 ├── skills/
@@ -115,19 +134,18 @@ HayPlusbot/
 └── tests/
 ```
 
-**Important:** the `lib/brokers/` abstraction is preserved even though HFM is the only current implementation. Do not hardcode HFM references outside `lib/brokers/hfm/`. Use the `BrokerProvider` interface elsewhere. This is not over-engineering — it's accepting minor abstraction cost today to enable easier broker migration in future.
+**Important:** the `lib/brokers/` abstraction is preserved even though HFM is the only current implementation. Do not hardcode HFM references outside `lib/brokers/hfm/`. Use the `BrokerProvider` interface elsewhere. This is not over-engineering — it's accepting minor abstraction cost today to enable easier broker migration in future. In v3.4 the HFM provider's API methods are skeletons (HFM has no API), but the abstraction remains useful for code organisation and for swapping to a different broker if needed.
 
 ---
 
-## Broker-agnostic design rules (preserved from v2.2)
+## Broker-agnostic design rules
 
 1. Never import from `lib/brokers/hfm/` anywhere except the provider registration point.
 2. Every broker-specific concept has a corresponding method on the `BrokerProvider` interface.
 3. UI copy referring to "HFM" should come from a config sourced from the active provider, not be hardcoded in components.
-4. When writing tests, use a mock `BrokerProvider`, not a mocked HFM client.
-5. If you're unsure whether something is broker-specific or generic, ask.
-
-The `BrokerProvider` interface for v3 is smaller than v2.2's (no per-user MT5 methods) but preserves the same discipline.
+4. When writing tests, use the `MockBrokerProvider`, not a mocked HFM client.
+5. The active provider is selected via `BROKER_PROVIDER` env var (`mock` or `hfm`).
+6. If you're unsure whether something is broker-specific or generic, ask.
 
 ---
 
@@ -148,7 +166,7 @@ The `BrokerProvider` interface for v3 is smaller than v2.2's (no per-user MT5 me
 - All routes under `/dashboard`, `/signals`, `/subscribe`, `/settings` require authenticated AND disclosure-signed.
 - `/admin/*` requires authenticated AND `is_admin`.
 - `/onboarding/disclosure` requires authenticated only (this is where users sign the disclosure).
-- Public pages (landing, how-it-works, FAQ, commercial, risk-disclosure-view) require nothing.
+- Public pages (landing, how-it-works, FAQ, risk-disclosure-view) require nothing.
 - Enforcement in middleware AND in RLS policies (belt-and-braces).
 
 ### Data access
@@ -157,12 +175,13 @@ The `BrokerProvider` interface for v3 is smaller than v2.2's (no per-user MT5 me
 - RLS enforces disclosure-signed access to signals, trades, master_account_metrics.
 
 ### Testing
-- Vitest for unit tests. Playwright for E2E of signup, disclosure signing, subscription flow.
-- SMC pattern detection tests use canonical chart scenarios from SKILL.md, including new non-USD cross tests.
-- `BrokerProvider` tests use a mock provider.
+- Vitest for unit tests. Playwright for E2E of signup, disclosure signing, account number recording, admin reconciliation.
+- SMC pattern detection tests use canonical chart scenarios from SKILL.md, including non-USD cross tests.
+- `BrokerProvider` tests use `MockBrokerProvider`.
 - Admin action logging: verify UPDATE and DELETE on `admin_action_log` raise exceptions.
+- Admin reconciliation: verify CSV processing produces correct subscribe state transitions.
 
-### Admin actions (critical pattern — same as v2.2)
+### Admin actions (critical pattern)
 
 Every destructive admin action follows this exact ordering:
 
@@ -176,40 +195,41 @@ Every destructive admin action follows this exact ordering:
 
 Never skip step 4. Never act-then-log. The audit log is the source of truth — if an action executes but the log fails, that's worse than the action not happening at all.
 
-The list of destructive actions in v3 is shorter than v2.2 (no per-user license management). Covered: pausing/resuming master bot, closing master positions, changing master risk/pairs, adding/removing admin users, global kill switches, manually marking a user subscription for support cases.
+Destructive actions in v3.4 include: pausing/resuming master bot, closing master positions, changing master risk/pairs, adding/removing admin users, global kill switches, **subscriber CSV reconciliation upload, manual subscriber count update, manually marking a user subscription for support cases.**
 
-### Balance verification pattern (subscribe flow, v3.3)
+### Subscriber reconciliation pattern (v3.4)
 
-Implemented in `lib/brokers/hfm/partner-client.ts` as a method exposed through the `BrokerProvider` interface.
+Implemented at `/admin/hfm-sync`. Replaces v3.3's automated daily Edge Function.
 
-The flow when user clicks "Subscribe" on the subscribe page:
+Flow when admin uploads a CSV from HFM Partner Area:
 
-1. Server Action validates user is authenticated + disclosure signed
-2. Server Action calls `BrokerProvider.getAccountBalance(hfmAccountNumber)`
-3. Convert balance to USD via Finnhub FX rate (cached 5 minutes)
-4. Compare USD-equivalent against $85 threshold (accommodates the 5% buffer on the $90 hard gate)
-5. If below $85: return structured error, subscribe action blocks, user remains on page
-6. If $85 or above: proceed to HFcopy subscription handoff (external redirect to HFM)
-7. Log every check to `subscribe_balance_check_log` table with outcome and exact balance
+1. Server Action validates admin
+2. Parse CSV via `papaparse` (expected columns: `account_number`, `status`, etc.)
+3. Filter to accounts with `status = 'active'`
+4. For each `signups` row with a recorded `hfm_account_number`:
+   - If account on HFM list AND not yet verified → mark `hfm_account_verified_under_our_code = true`, `hfm_account_verified_at = now()`
+   - If account on HFM list AND not yet `hfcopy_subscribed` → mark subscribed, set `hfcopy_subscribed_at`
+   - If account NOT on HFM list AND was previously subscribed → mark `hfcopy_subscribed = false`, set `hfcopy_unsubscribed_at`
+   - If account NOT on HFM list AND not yet verified → add to "unmatched" list for admin follow-up
+5. Log full reconciliation summary to `admin_action_log` with metadata
+6. Return summary to admin dashboard for display
 
-**Never display the $90 or $85 figure in error messages.** Error text is user-friendly: "Your HFM account balance is below the minimum required for reliable copy trading. We recommend at least $100 USD equivalent." The internal gate is internal — log it server-side, never echo it to client.
+**Welcome email trigger** for newly-subscribed users is marked TODO until Phase 7 Resend integration.
 
-Rate-limit per-user: max 3 attempts per 60 seconds to prevent API abuse while users adjust their funding.
-
-The `subscribe_balance_check_log` table follows the same append-only pattern as `admin_action_log` — Postgres trigger raises on UPDATE/DELETE, RLS enforces service-role-only access. Unlike `admin_action_log`, this log is retained for 90 days then archived/purged (it's operational, not audit).
+The CSV is not stored beyond processing (no PII retention beyond what the reconciliation already updates in `signups`).
 
 ---
 
 ## Trading logic
 
-Same SMC/ICT methodology as v2.2. SKILL.md is authoritative.
+Same SMC/ICT methodology as v2.2/v3. SKILL.md is authoritative.
 
-**Small v3 adjustments:**
-- **9 pairs instead of 6** (added GBP/JPY, EUR/JPY, AUD/JPY)
-- **DXY filter (Fundamental Filter 3) is skipped on non-USD crosses.** For GBP/JPY, EUR/JPY, AUD/JPY setups, pass Fundamental Filters 1 (rate differential — still applicable using the pair's two currencies) and 2 (calendar — still applicable for either currency in the pair). Filter 3 is not applicable.
-- **Expected signal frequency:** 3-7 A+ signals per week. Slightly higher than v2.2 due to broader pair coverage.
+**Key facts:**
+- **9 pairs** (added GBP/JPY, EUR/JPY, AUD/JPY in v3)
+- **DXY filter (Fundamental Filter 3) is skipped on non-USD crosses.** For GBP/JPY, EUR/JPY, AUD/JPY setups, pass Fundamental Filters 1 and 2 only.
+- **Expected signal frequency:** 3-7 A+ signals per week.
 
-**The engine runs once on the master account.** There's no dual-destination execution anymore. One MetaAPI call per signal. HFM handles all mirroring.
+**The engine runs once on the master account.** One MetaAPI call per signal. HFM handles all mirroring.
 
 Circuit breakers apply to the master account only: 2 A+ trades/day, 5/week, pause after 2 consecutive losses or 3 daily losses.
 
@@ -219,16 +239,19 @@ Circuit breakers apply to the master account only: 2 A+ trades/day, 5/week, paus
 
 Prototypes in `prototypes/` are the visual source of truth. Two fonts total: Outfit for body/headings, JetBrains Mono for all numbers.
 
-v3 has a different set of prototypes from v2.2. Some v2.2 prototypes are retired (license state screens, copy trading marketing panel, funding required page, multi-step onboarding). New prototypes replace them. See `HayPlusbot-Design-Prompts-v3-Updates.md` for the complete mapping.
+v3.4-specific prototype adjustments:
+- p17 (subscribe flow) — no balance error state variant; success message references 24-48 hour verification cycle
+- p16 (admin dashboard) — gains "Subscriber Reconciliation" subsection with CSV upload UI
 
 ---
 
 ## Security
 
 - All secrets in env vars. Never committed.
-- Master account MT5 investor password encrypted with **pgsodium** in `master_account_config.mt_investor_password_encrypted` (key name: `master_account_password`). pgsodium is the v3.3 default per PRD §12. If a project doesn't have pgsodium enabled, the migration's key-creation block is a no-op — the column should then be migrated to Supabase Vault. Decision recorded in `supabase/migrations/20260430120000_extensions.sql` and `supabase/README.md`.
-- HFM Partner API key, MetaAPI token, Anthropic API key, Resend key — env vars.
+- Master account MT5 investor password encrypted with pgsodium in `master_account_config`.
+- MetaAPI token, Anthropic API key, Resend key — env vars.
 - Client-side never sees server-side secrets.
+- CSV uploads: validate file size (max 10MB), validate MIME type (text/csv), parse with papaparse's safe defaults.
 
 ---
 
@@ -250,26 +273,34 @@ Nigerian SEO: British English spellings (colour, organisation, optimisation). Ta
 
 ## When to ask, when to proceed
 
-**Proceed** when implementing per PRD v3, running a build sequence prompt, matching a prototype, writing tests, fixing identified bugs.
+**Proceed** when implementing per PRD v3.4, running a build sequence prompt, matching a prototype, writing tests, fixing identified bugs.
 
-**Ask before** changing architectural decisions, adding external dependencies, deviating from prototypes, modifying A+ rules, relaxing disclosure-gating, breaking broker-agnostic discipline.
+**Ask before** changing architectural decisions, adding external dependencies, deviating from prototypes, modifying A+ rules, relaxing disclosure-gating, breaking broker-agnostic discipline, exposing internal verification mechanics in user-facing copy.
 
 ---
 
 ## Operational notes
 
 ### Build sequence
-PRD v3 Section 13 has 29 prompts across 7 phases (down from v2.2's 33).
+PRD v3.4 Section 13 has 27 prompts across 6 phases (down from v3.3's 29). Phase 3 has 4 prompts instead of 6 (balance gate removed, sync simplified to admin action).
 
 ### Database migrations
-Sequential numbered files in `supabase/migrations/`. Never edit deployed migrations.
+Sequential timestamped files in `supabase/migrations/` (Supabase CLI naming convention). Never edit deployed migrations.
 
 ### Rate limits
 - **Anthropic API:** Haiku for sentiment and narrative. Cache aggressively.
 - **MetaAPI.cloud:** one account subscription, fixed cost.
-- **HFM Partner API:** exponential backoff on 429.
-- **Finnhub:** free tier sufficient for the 9-pair monitoring plus DXY.
 - **Trading Economics:** paid tier, 15-min polling.
+- **Finnhub:** free tier sufficient for DXY filter and news.
+
+### Manual operational tasks (v3.4)
+Your client commits to roughly 30-60 minutes per week of operational work:
+- Daily HFM Partner Area dashboard check (5 min) — they'd do this anyway
+- Weekly CSV upload to admin dashboard (5-10 min)
+- Periodic subscriber count update (1 min when count changes meaningfully)
+- Occasional verification-failed user emails (1-2 per week)
+
+This is not extra work — it's the actual operational reality of being an HFcopy strategy provider.
 
 ---
 
@@ -295,6 +326,8 @@ pnpm supabase db push
 
 ## Final reminder
 
-HayPlusbot v3 is simpler than v2.2 in almost every dimension: simpler database, simpler onboarding, simpler execution path, simpler infrastructure footprint, simpler support burden. This simplicity is the point. Resist adding complexity.
+HayPlusbot v3.4 is simpler than v2.2 in almost every dimension: simpler database, simpler onboarding, simpler execution path, simpler infrastructure footprint, simpler support burden. v3.4 is even slightly simpler than v3.3 because three API-dependent automation features are replaced by manual processes — but the operational burden of those manual processes is small.
 
-The product's value proposition is: "an authorised HFM strategy provider running disciplined SMC/ICT setups; subscribe via HFcopy, receive 60% of profits, no upfront cost." That's the whole product. If you catch yourself adding features that require extensive explanation, pull back.
+The product's value proposition is unchanged: "an authorised HFM strategy provider running disciplined SMC/ICT setups; subscribe via HFcopy, receive 60% of profits, no upfront cost." That's the whole product. If you catch yourself adding features that require extensive explanation, pull back.
+
+The v3.4 architecture is what successful AI-strategy-provider services on broker copy-trading platforms actually use (Sonic AI, NEO FX on TAG Markets/CopyX). It's not a compromise; it's the industry pattern.

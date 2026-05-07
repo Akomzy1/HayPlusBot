@@ -1,6 +1,6 @@
 # HayPlusbot — Risk Disclosure & Subscriber Acknowledgment
 
-**Version:** 3.0
+**Version:** 3.4
 **Effective date:** [TO BE INSERTED AT LAUNCH]
 **Applies to:** Every user completing signup on HayPlusbot before accessing any product content
 
@@ -102,6 +102,10 @@ HFM's platform availability and execution quality. Market gaps, flash crashes, c
 
 Losses from any of these are a normal part of trading risk, borne by you as the account holder.
 
+### A note on verification timing
+
+Because we rely on HFM's reporting to verify your account is registered under our referral, verification is not instantaneous. After you provide your HFM account number, we typically confirm your account is under our referral within 24-48 hours. You'll receive an email once verification completes. Until then, you can complete your HFcopy subscription on HFM's platform, but performance reporting and dashboards on HayPlusbot won't show your subscription as active until the next reconciliation.
+
 ---
 
 ## Part 4 — The commercial arrangement
@@ -186,7 +190,7 @@ For anything involving your HFM account — subscribing, unsubscribing, deposits
 - Your name: [AUTO-FILLED]
 - Your email: [AUTO-FILLED]
 - Your country of residence: [AUTO-FILLED]
-- Document version: 3.0
+- Document version: 3.4
 - Document hash (SHA-256): [AUTO-FILLED]
 - Signed at (UTC): [AUTO-FILLED]
 - IP address: [AUTO-FILLED]
