@@ -806,6 +806,10 @@ export type Database = {
     Functions: {
       has_signed_disclosure: { Args: never; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
+      record_hfm_account: {
+        Args: { p_account_number: string; p_server: string }
+        Returns: undefined
+      }
     }
     Enums: {
       delivery_status: "sent" | "failed" | "bounced"
